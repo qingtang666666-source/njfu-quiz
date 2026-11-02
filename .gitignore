@@ -1,0 +1,40 @@
+# 依赖
+node_modules/
+.npm/
+npm-debug.log*
+
+# 构建产物
+dist/
+dist-gated/
+*.local
+
+# 安卓
+web/android/.gradle/
+web/android/build/
+web/android/app/build/
+web/android/local.properties
+web/android/.idea/
+web/android/capacitor-cordova-android-plugins/
+*.keystore
+*.jks
+*.apk
+*.aab
+
+# 工具与临时文件
+tools/*.exe
+tools/*.zip
+tools/*.log
+*.log
+.pi/
+.DS_Store
+Thumbs.db
+
+# 备份与抓取原始数据（体积大，按需自己生成）
+traffic/
+export/
+
+# 部署包（构建产物）
+deploy/dist.zip
+
+# 原始题库抓取结果
+raw/

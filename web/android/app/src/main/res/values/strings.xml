@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NJFU刷题</string>
+    <string name="title_activity_main">NJFU刷题</string>
+    <string name="package_name">com.njfu.quiz</string>
+    <string name="custom_url_scheme">com.njfu.quiz</string>
+</resources>
