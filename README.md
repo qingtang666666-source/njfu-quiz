@@ -90,6 +90,21 @@ python tests/e2e_smoke.py     # 首页→科目→练习→判分→翻页→答
 python tests/e2e_flows.py     # 连答→错题本→刷新持久化→统计→深色
 ```
 
+## 发布网页
+
+```powershell
+# 只更新站点（构建 + 推 gh-pages）
+powershell -ExecutionPolicy Bypass -File deploy\publish.ps1
+
+# 同时把源码改动推到 main
+powershell -ExecutionPolicy Bypass -File deploy\publish.ps1 -PushMain
+
+# 需要 token 时（CI 或无凭据环境）
+powershell -ExecutionPolicy Bypass -File deploy\publish.ps1 -Token github_pat_xxx
+```
+
+脚本会构建到 `web/dist-pages`（base=`/njfu-quiz/`），同步到 `gh-pages` 分支，内容没变化则跳过推送。
+
 ## 安卓
 
 ```bash
