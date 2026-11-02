@@ -170,6 +170,14 @@ def build_parsed(sid, name, path):
             q["blanks"] = blanks
         if qtype == "essay":
             q["explanation"] = norm_space(it["answer_text"])
+        # 质量标记透传（过时/待核对），前端可选择展示
+        if it.get("stale"):
+            q["stale"] = True
+            q["staleNote"] = "；".join(n.get("why", "") for n in it.get("stale_note", []))
+        if it.get("verify_year"):
+            q["verifyYear"] = True
+        if it.get("source") == "server2026" or it.get("official_answer"):
+            q["official"] = True
         questions.append(q)
 
     # 断言

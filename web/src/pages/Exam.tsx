@@ -175,6 +175,11 @@ export default function Exam({ sid }: { sid: string }) {
           <span className="tiny muted">{SCORE[q.type]} 分</span>
         </div>
         <div className="stem">{q.stem}</div>
+        {q.stale && (
+          <div className="tiny" style={{ color: '#c0392b', marginBottom: 8 }}>
+            ⚠ 本题涉及的表述已过时：{q.staleNote}
+          </div>
+        )}
         {q.options.map((o) => (
           <button key={o.key} className={`opt ${sel.includes(o.key) ? 'sel' : ''}`} onClick={() => pick(o.key)}>
             <span className="k">{o.key}</span>

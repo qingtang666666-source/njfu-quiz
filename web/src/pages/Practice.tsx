@@ -269,6 +269,16 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
         </div>
 
         <div className="stem">{q.stem}</div>
+        {q.stale && (
+          <div className="tiny" style={{ color: '#c0392b', marginBottom: 8 }}>
+            ⚠ 本题涉及的表述已过时：{q.staleNote}
+          </div>
+        )}
+        {q.verifyYear && (
+          <div className="tiny muted" style={{ marginBottom: 8 }}>
+            数字类题，答案可能随年份变化，以最新教材为准。
+          </div>
+        )}
 
         {q.type === 'fill' ? (
           <div>

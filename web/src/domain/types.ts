@@ -22,6 +22,13 @@ export interface Question {
   explanation?: string
   /** 章节（军理题库按章分） */
   chapter?: string
+  /** 题库标注为过时（如旧军种名称），刷题时提示 */
+  stale?: boolean
+  staleNote?: string
+  /** 数字类题，答案可能逐年变化 */
+  verifyYear?: boolean
+  /** 来自服务端官方答案 */
+  official?: boolean
 }
 
 export interface SubjectMeta {
