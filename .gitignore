@@ -38,3 +38,6 @@ deploy/dist.zip
 
 # 原始题库抓取结果
 raw/
+
+# Pages 构建产物
+web/dist-pages/
