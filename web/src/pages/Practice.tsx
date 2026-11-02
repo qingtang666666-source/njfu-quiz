@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TopBar, subjectById, useApp } from '../App'
 import { useSubject } from '../components/useSubject'
 import {
-  finishSession, getMeta, listWrong, recordAnswer, setMeta, startSession, starSet, toggleStar,
+  finishSession, getMastery, getMeta, listWrong, recordAnswer, setMeta, startSession, starSet, toggleStar,
 } from '../db/repo'
 import { answerText, isCorrect, normalizeAnswer } from '../domain/grade'
 import { TYPE_LABEL, type Question } from '../domain/types'
@@ -12,7 +12,7 @@ export type PracticeMode = 'sequential' | 'random' | 'wrong' | 'star'
 const MODE_TITLE: Record<PracticeMode, string> = {
   sequential: '顺序练习',
   random: '随机练习',
-  wrong: '错题练习',
+  wrong: '错题重做',
   star: '收藏练习',
 }
 
@@ -38,12 +38,20 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
   const [showJump, setShowJump] = useState(false)
   const [stars, setStars] = useState<Set<string>>(new Set())
   const [localState, setLocalState] = useState<Record<string, 'correct' | 'wrong'>>({})
+  const [mastery, setMasteryState] = useState(2)
+  const [streaks, setStreaks] = useState<Record<string, number>>({})
+  const [lastResult, setLastResult] = useState<{ streak: number; mastered: boolean; correct: boolean } | null>(null)
+  const [round, setRound] = useState(0)
+  const [roundDone, setRoundDone] = useState(false)
 
   const sessionRef = useRef<number | null>(null)
   const countsRef = useRef({ answered: 0, correct: 0 })
   const builtRef = useRef(false)
 
-  // 组队列
+  // 掌握标准
+  useEffect(() => { void getMastery().then(setMasteryState) }, [])
+
+  // 组队列（round 变化时重建，用于「再来一轮」）
   useEffect(() => {
     if (loading || builtRef.current || !questions.length) return
     builtRef.current = true
@@ -57,6 +65,7 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
       } else if (mode === 'wrong') {
         const wrong = await listWrong(sid)
         const rank = new Map(wrong.map((w) => [w.qid, w.count]))
+        setStreaks(Object.fromEntries(wrong.map((w) => [w.qid, w.streak ?? 0])))
         list = questions.filter((q) => rank.has(q.qid)).sort((a, b) => (rank.get(b.qid)! - rank.get(a.qid)!))
       } else if (mode === 'star') {
         const set = await starSet(sid)
@@ -81,7 +90,8 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
       sessionRef.current = await startSession(sid, mode, list.length)
     })()
     return () => { alive = false }
-  }, [loading, questions, mode, sid, startQid])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, questions, mode, sid, startQid, round])
 
   // 退出时结算会话
   useEffect(() => {
@@ -99,6 +109,7 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
     setSelected([])
     setGraded(false)
     setCorrect(false)
+    setLastResult(null)
   }, [])
 
   const goTo = useCallback((n: number) => {
@@ -111,15 +122,19 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
     const ok = isCorrect(q, answer)
     setCorrect(ok)
     setGraded(true)
+    setLastResult(null)
     setLocalState((s) => ({ ...s, [q.qid]: ok ? 'correct' : 'wrong' }))
     countsRef.current.answered += 1
     if (ok) countsRef.current.correct += 1
-    await recordAnswer({
+    const res = await recordAnswer({
       subjectId: sid, qid: q.qid, question: q, userAnswer: answer,
       sessionId: sessionRef.current ?? undefined,
+      mastery,
     })
+    setStreaks((m) => ({ ...m, [q.qid]: res.streak }))
+    setLastResult({ streak: res.streak, mastered: res.mastered, correct: res.correct })
     if (mode === 'sequential') void setMeta(`pos:${sid}:sequential`, q.qid)
-  }, [q, graded, sid, mode])
+  }, [q, graded, sid, mode, mastery])
 
   const choose = useCallback((key: string) => {
     if (!q || graded) return
@@ -132,9 +147,27 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
   }, [q, graded, submit])
 
   const next = useCallback(() => {
-    if (idx + 1 < queue.length) goTo(idx + 1)
-    else toast('已经是最后一题')
-  }, [idx, queue.length, goTo, toast])
+    if (idx + 1 < queue.length) {
+      goTo(idx + 1)
+    } else if (mode === 'wrong') {
+      setRoundDone(true)
+    } else {
+      toast('已经是最后一题')
+    }
+  }, [idx, queue.length, goTo, toast, mode])
+
+  const restartRound = useCallback(() => {
+    builtRef.current = false
+    setRoundDone(false)
+    setLocalState({})
+    setStreaks({})
+    setIdx(0)
+    setSelected([])
+    setGraded(false)
+    setCorrect(false)
+    setLastResult(null)
+    setRound((r) => r + 1)
+  }, [])
 
   const prev = useCallback(() => {
     if (idx > 0) goTo(idx - 1)
@@ -218,6 +251,11 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
         <div className="qhead">
           <span className="badge">{TYPE_LABEL[q.type]}</span>
           <span className="tiny muted">第 {idx + 1} 题 · 已答 {answeredN}/{queue.length}</span>
+          {mode === 'wrong' && (
+            <span className="badge" title={`连续答对 ${mastery} 次移出错题本`}>
+              连对 {(streaks[q.qid] ?? 0)}/{mastery}
+            </span>
+          )}
         </div>
 
         <div className="stem">{q.stem}</div>
@@ -259,6 +297,17 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
                     你的答案：{normalizeAnswer(selected).join(' ')}
                   </div>
                 )}
+                {mode === 'wrong' && (
+                  <div className="small" style={{ marginTop: 6 }}>
+                    {!lastResult
+                      ? '正在记录…'
+                      : lastResult.mastered
+                        ? `已连续答对 ${mastery} 次，已移出错题本`
+                        : lastResult.correct
+                          ? `已连对 ${lastResult.streak}/${mastery} 次，再答对 ${mastery - lastResult.streak} 次移出错题本`
+                          : `答错，连对清零（需连续答对 ${mastery} 次）`}
+                  </div>
+                )}
               </div>
             </div>
             <div className="tiny muted" style={{ marginBottom: 8 }}>
@@ -288,6 +337,31 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
           )}
         </div>
       </div>
+
+      {roundDone && (
+        <div className="sheet" onClick={() => setRoundDone(false)}>
+          <div onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 10px' }}>本轮结束</h3>
+            <div className="grid3" style={{ marginBottom: 12 }}>
+              <div className="stat"><b>{Object.keys(localState).length}</b><span>本轮作答</span></div>
+              <div className="stat">
+                <b>{Object.values(localState).filter((v) => v === 'correct').length}</b><span>答对</span>
+              </div>
+              <div className="stat">
+                <b>{queue.filter((item) => (streaks[item.qid] ?? 0) >= mastery).length}</b><span>已掌握</span>
+              </div>
+            </div>
+            <div className="tiny muted" style={{ marginBottom: 12, lineHeight: 1.8 }}>
+              错题需要连续答对 {mastery} 次才移出错题本。答错会清零，重新计。
+              还有 {Math.max(0, queue.length - queue.filter((item) => (streaks[item.qid] ?? 0) >= mastery).length)} 题没掌握。
+            </div>
+            <button className="btn primary block" style={{ marginBottom: 8 }} onClick={restartRound}>
+              再来一轮（只出错题）
+            </button>
+            <button className="btn block ghost" onClick={back}>返回科目</button>
+          </div>
+        </div>
+      )}
 
       {showJump && (
         <div className="sheet" onClick={() => setShowJump(false)}>

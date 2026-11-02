@@ -37,11 +37,30 @@ describe('recordAnswer / 错题本', () => {
     expect((await db.progress.get('t|t:2'))?.times).toBe(2)
   })
 
-  it('答对后移出错题本', async () => {
+  it('连续答对 2 次才移出错题本，答错清零', async () => {
     await rec(Q(2), ['B'])
+    expect((await db.wrongs.get('t|t:2'))?.streak).toBe(0)
+
+    // 第一次答对：留在错题本，连对 1
+    await rec(Q(2), ['A'])
+    expect((await db.wrongs.get('t|t:2'))?.streak).toBe(1)
+
+    // 答错：清零
+    await rec(Q(2), ['C'])
+    expect((await db.wrongs.get('t|t:2'))?.streak).toBe(0)
+
+    // 连对两次：移出
+    await rec(Q(2), ['A'])
+    expect((await db.wrongs.get('t|t:2'))?.streak).toBe(1)
     await rec(Q(2), ['A'])
     expect(await db.wrongs.get('t|t:2')).toBeUndefined()
     expect((await db.progress.get('t|t:2'))?.state).toBe('correct')
+  })
+
+  it('mastery=1 时答对立即移出', async () => {
+    await rec(Q(2), ['B'])
+    await recordAnswer({ subjectId: 't', qid: 't:2', question: Q(2), userAnswer: ['A'], mastery: 1 })
+    expect(await db.wrongs.get('t|t:2')).toBeUndefined()
   })
 
   it('多选按集合判分', async () => {

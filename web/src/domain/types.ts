@@ -44,7 +44,8 @@ export interface WrongRow {
   key: string
   subjectId: string
   qid: string
-  count: number
+  count: number        // 累计答错次数
+  streak: number       // 当前连续答对次数，答错清零
   lastAt: number
   cleared: boolean
 }

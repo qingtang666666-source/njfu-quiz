@@ -30,6 +30,12 @@ export class QuizDB extends Dexie {
       attempts: '++id, sessionId, subjectId, qid, at',
       meta: 'key',
     })
+    // v2：错题本增加「连续答对」计数
+    this.version(2).stores({
+      wrongs: 'key, subjectId, dueAt, cleared',
+    }).upgrade((tx) => tx.table('wrongs').toCollection().modify((w: any) => {
+      if (typeof w.streak !== 'number') w.streak = 0
+    }))
   }
 }
 

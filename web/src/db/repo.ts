@@ -57,11 +57,25 @@ export interface RecordArgs {
   at?: number
 }
 
-/** 记录一次作答：progress + attempts + 错题本，三张表一次事务 */
-export async function recordAnswer(args: RecordArgs): Promise<boolean> {
+export interface RecordResult {
+  correct: boolean
+  /** 该题在错题本里的当前连对次数（不在错题本时为 0） */
+  streak: number
+  /** 是否因为本次答对而移出错题本 */
+  mastered: boolean
+}
+
+/**
+ * 记录一次作答：progress + attempts + 错题本，三张表一次事务。
+ * 错题需连续答对 mastery 次才移出错题本，答错一次清零重来。
+ */
+export async function recordAnswer(args: RecordArgs & { mastery?: number }): Promise<RecordResult> {
   const { subjectId, qid, question, userAnswer, sessionId, at = Date.now() } = args
+  const mastery = Math.max(1, args.mastery ?? 2)
   const correct = isCorrect(question, userAnswer)
   const key = keyOf(subjectId, qid)
+  let streak = 0
+  let mastered = false
 
   await db.transaction('rw', db.progress, db.attempts, db.wrongs, async () => {
     const prev = await db.progress.get(key)
@@ -77,17 +91,28 @@ export async function recordAnswer(args: RecordArgs): Promise<boolean> {
     }
     const wrong = await db.wrongs.get(key)
     if (correct) {
-      if (wrong && !wrong.cleared) await db.wrongs.delete(key)
+      if (wrong && !wrong.cleared) {
+        streak = (wrong.streak ?? 0) + 1
+        if (streak >= mastery) {
+          await db.wrongs.delete(key)
+          streak = mastery
+          mastered = true
+        } else {
+          await db.wrongs.update(key, { streak })
+        }
+      }
     } else {
+      streak = 0
       await db.wrongs.put({
         key, subjectId, qid,
         count: (wrong?.count ?? 0) + 1,
+        streak: 0,
         lastAt: at,
         cleared: false,
       })
     }
   })
-  return correct
+  return { correct, streak, mastered }
 }
 
 export async function startSession(subjectId: string, mode: Mode, total: number): Promise<number> {
@@ -144,9 +169,10 @@ export async function subjectStats(subjectId: string): Promise<SubjectStats> {
   }
 }
 
-export async function listWrong(subjectId: string): Promise<{ qid: string; count: number; lastAt: number }[]> {
+export async function listWrong(subjectId: string): Promise<{ qid: string; count: number; streak: number; lastAt: number }[]> {
   const rows = await db.wrongs.where('subjectId').equals(subjectId).toArray()
-  return rows.filter((r) => !r.cleared).map((r) => ({ qid: r.qid, count: r.count, lastAt: r.lastAt }))
+  return rows.filter((r) => !r.cleared)
+    .map((r) => ({ qid: r.qid, count: r.count, streak: r.streak ?? 0, lastAt: r.lastAt }))
 }
 
 export async function wrongCountAll(): Promise<number> {
@@ -186,6 +212,15 @@ export async function resetSubject(subjectId: string) {
 
 export async function recentSessions(limit = 20) {
   return db.sessions.orderBy('startedAt').reverse().limit(limit).toArray()
+}
+
+export async function getMastery(): Promise<number> {
+  const v = await getMeta<number>('mastery', 2)
+  return Math.max(1, Math.min(5, Number(v) || 2))
+}
+
+export async function setMastery(n: number) {
+  await setMeta('mastery', Math.max(1, Math.min(5, n)))
 }
 
 export async function getMeta<T>(key: string, fallback: T): Promise<T> {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { TopBar, subjectById, useApp } from '../App'
 import { useSubject } from '../components/useSubject'
-import { listWrong, removeWrong } from '../db/repo'
+import { getMastery, listWrong, removeWrong } from '../db/repo'
 import { answerText } from '../domain/grade'
 import { TYPE_LABEL } from '../domain/types'
 
@@ -9,11 +9,13 @@ export default function Wrong({ sid }: { sid: string }) {
   const { subjects, go, toast } = useApp()
   const meta = subjectById(subjects, sid)
   const { questions, loading, reload } = useSubject(meta, sid)
-  const [rows, setRows] = useState<{ qid: string; count: number; lastAt: number }[]>([])
+  const [rows, setRows] = useState<{ qid: string; count: number; streak: number; lastAt: number }[]>([])
+  const [mastery, setMastery] = useState(2)
   const [open, setOpen] = useState<string | null>(null)
 
   useEffect(() => {
     void listWrong(sid).then((r) => setRows(r.sort((a, b) => b.count - a.count)))
+    void getMastery().then(setMastery)
   }, [sid, loading])
 
   const map = new Map(questions.map((q) => [q.qid, q]))
@@ -29,8 +31,8 @@ export default function Wrong({ sid }: { sid: string }) {
         {!loading && rows.length > 0 && (
           <>
             <div className="row between" style={{ marginBottom: 10 }}>
-              <span className="small muted">共 {rows.length} 题，按错误次数排序</span>
-              <button className="btn sm primary" onClick={() => go({ name: 'practice', sid, mode: 'wrong' })}>开始错题练习</button>
+              <span className="small muted">共 {rows.length} 题，按错误次数排序（连对 {mastery} 次自动移出）</span>
+              <button className="btn sm primary" onClick={() => go({ name: 'practice', sid, mode: 'wrong' })}>开始错题重做</button>
             </div>
             <div className="list">
               {rows.map((r) => {
@@ -42,7 +44,7 @@ export default function Wrong({ sid }: { sid: string }) {
                     <div className="row between" style={{ alignItems: 'flex-start' }}>
                       <div className="grow">
                         <div className="tiny muted">
-                          {TYPE_LABEL[q.type]} · 错 {r.count} 次 · ID {q.serverId}
+                          {TYPE_LABEL[q.type]} · 错 {r.count} 次 · 连对 {r.streak ?? 0}/{mastery} · ID {q.serverId}
                         </div>
                         <div className="small" style={{ marginTop: 3, whiteSpace: 'pre-wrap' }}>{q.stem}</div>
                       </div>

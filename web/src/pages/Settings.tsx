@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { TopBar, useApp } from '../App'
 import { db } from '../db/db'
-import { exportAll, importAll, setMeta, storageEstimate } from '../db/repo'
+import { exportAll, getMastery, importAll, setMastery, setMeta, storageEstimate } from '../db/repo'
 import { getMeta } from '../db/repo'
 
 export default function Settings() {
   const { theme, setTheme, toast, reload } = useApp()
   const [scale, setScale] = useState(100)
+  const [mastery, setMasteryState] = useState(2)
   const [usage, setUsage] = useState<string>('—')
   const [counts, setCounts] = useState({ subjects: 0, questions: 0, progress: 0, wrongs: 0 })
   const fileRef = useRef<HTMLInputElement>(null)
@@ -14,6 +15,7 @@ export default function Settings() {
   useEffect(() => {
     void (async () => {
       const s = await getMeta<number>('fontScale', 100)
+      setMasteryState(await getMastery())
       setScale(s)
       document.documentElement.style.fontSize = `${16 * (s / 100)}px`
       const [subjects, questions, progress, wrongs] = await Promise.all([
@@ -53,6 +55,27 @@ export default function Settings() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <h2>错题重做</h2>
+          <div className="row between" style={{ marginBottom: 8 }}>
+            <span className="small">移出错题本所需连对次数</span>
+            <div className="seg">
+              {[1, 2, 3].map((n) => (
+                <button
+                  key={n}
+                  className={mastery === n ? 'on' : ''}
+                  onClick={async () => { setMasteryState(n); await setMastery(n); toast(`改为连续答对 ${n} 次移出`) }}
+                >
+                  {n} 次
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="tiny muted">
+            答错一次连对清零，重新计。设为 1 次时，答对即移出。
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { TopBar, subjectById, useApp } from '../App'
 import { useSubject } from '../components/useSubject'
-import { listWrong, resetSubject, starSet } from '../db/repo'
+import { getMastery, listWrong, resetSubject, starSet } from '../db/repo'
 
 export default function Subject({ sid }: { sid: string }) {
   const { subjects, go, back, toast } = useApp()
@@ -9,12 +9,13 @@ export default function Subject({ sid }: { sid: string }) {
   const { stats, loading, questions, reload } = useSubject(meta, sid)
   const [wrongN, setWrongN] = useState(0)
   const [starN, setStarN] = useState(0)
+  const [mastery, setMastery] = useState(2)
 
   useEffect(() => {
     let alive = true
     ;(async () => {
-      const [w, s] = await Promise.all([listWrong(sid), starSet(sid)])
-      if (alive) { setWrongN(w.length); setStarN(s.size) }
+      const [w, s, m] = await Promise.all([listWrong(sid), starSet(sid), getMastery()])
+      if (alive) { setWrongN(w.length); setStarN(s.size); setMastery(m) }
     })()
     return () => { alive = false }
   }, [sid, stats])
@@ -68,6 +69,16 @@ export default function Subject({ sid }: { sid: string }) {
             错题本 {wrongN ? `(${wrongN})` : ''}
           </button>
         </div>
+
+        {wrongN > 0 && (
+          <button
+            className="btn primary block"
+            style={{ marginBottom: 12 }}
+            onClick={() => go({ name: 'practice', sid, mode: 'wrong' })}
+          >
+            错题重做（{wrongN} 题，连续答对 {mastery} 次移出）
+          </button>
+        )}
 
         {starN > 0 && (
           <button className="btn block" style={{ marginBottom: 12 }} onClick={() => go({ name: 'practice', sid, mode: 'star' })}>
