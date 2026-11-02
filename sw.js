@@ -1,6 +1,6 @@
-// 极简离线缓存：应用外壳 cache-first，题库数据 stale-while-revalidate
-const SHELL = 'njfu-shell-v1'
-const DATA = 'njfu-data-v1'
+// 离线缓存：外壳 cache-first，题库索引 network-first，其它题库数据 stale-while-revalidate
+const SHELL = 'njfu-shell-v2'
+const DATA = 'njfu-data-v2'
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest']
 
 self.addEventListener('install', (e) => {
@@ -22,9 +22,20 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== self.location.origin) return
 
   if (url.pathname.includes('/data/')) {
+    const isIndex = url.pathname.endsWith('/subjects.json')
     e.respondWith((async () => {
       const cache = await caches.open(DATA)
       const cached = await cache.match(req)
+      // 题库索引必须拿最新：网络优先，失败才回退缓存
+      if (isIndex) {
+        try {
+          const res = await fetch(req)
+          if (res.ok) cache.put(req, res.clone())
+          return res
+        } catch {
+          return cached || Response.error()
+        }
+      }
       const network = fetch(req).then((res) => {
         if (res.ok) cache.put(req, res.clone())
         return res
