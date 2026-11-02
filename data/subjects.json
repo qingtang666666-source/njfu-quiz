@@ -96,18 +96,18 @@
       "name": "军事理论",
       "term": "2026",
       "version": "2026",
-      "count": 394,
+      "count": 524,
       "byType": {
-        "fill": 166,
-        "single": 79,
-        "multiple": 48,
-        "judge": 71,
+        "fill": 203,
+        "single": 131,
+        "multiple": 69,
+        "judge": 91,
         "essay": 30
       },
-      "variants": 0,
-      "officialMerged": 41,
-      "officialAdded": 84
+      "variants": 1,
+      "officialMerged": 120,
+      "officialAdded": 213
     }
   ],
-  "total": 9407
+  "total": 9537
 }
