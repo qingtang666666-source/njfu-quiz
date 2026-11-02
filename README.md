@@ -4,6 +4,10 @@
 
 南林马院 2026 题库的刷题应用。7 门科目、9013 道题，网页与安卓双端，纯本地运行，不上传任何数据。
 
+在线体验：https://qingtang666666-source.github.io/njfu-quiz/
+
+安卓安装包：见 Releases 或 `release/NJFU刷题-1.0.apk`
+
 ## 功能
 
 - 科目列表：题量、已答进度、正确率
