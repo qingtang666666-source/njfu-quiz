@@ -1,6 +1,6 @@
 // 离线缓存：外壳 cache-first，题库索引 network-first，其它题库数据 stale-while-revalidate
-const SHELL = 'njfu-shell-v2'
-const DATA = 'njfu-data-v2'
+const SHELL = 'njfu-shell-v3'
+const DATA = 'njfu-data-v3'
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest']
 
 self.addEventListener('install', (e) => {
