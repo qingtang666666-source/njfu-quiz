@@ -60,11 +60,9 @@ try {
     git add -A
     if (git status --porcelain) {
       git -c user.name="青棠" -c user.email="qingtang666666@gmail.com" commit -q -m $Message
-      Push-WithAuth "main"
-      Write-Host "    main 已推送"
-    } else {
-      Write-Host "    main 无改动"
     }
+    Push-WithAuth "main"
+    Write-Host "    main 已推送"
   }
 
   # 3. 确保 gh-pages 分支存在
