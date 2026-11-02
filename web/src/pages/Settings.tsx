@@ -5,7 +5,7 @@ import { exportAll, getMastery, importAll, setMastery, setMeta, storageEstimate 
 import { getMeta } from '../db/repo'
 
 export default function Settings() {
-  const { theme, setTheme, toast, reload } = useApp()
+  const { theme, setTheme, toast, reload, subjects } = useApp()
   const [scale, setScale] = useState(100)
   const [mastery, setMasteryState] = useState(2)
   const [usage, setUsage] = useState<string>('—')
@@ -163,7 +163,8 @@ export default function Settings() {
           <h2>关于</h2>
           <div className="tiny muted" style={{ lineHeight: 1.9 }}>
             作者：青棠<br />
-            题库版本：2026（7 门，9013 题）<br />
+            题库：{subjects.length} 门，共 {subjects.reduce((n, x) => n + x.count, 0)} 题<br />
+            版本：{subjects.map((x) => x.version).filter((v, i, a) => a.indexOf(v) === i).join(' / ') || '—'}<br />
             数据来源：本机抓取的题库快照，只读不改<br />
             所有数据保存在浏览器本地，不上传任何服务器。<br />
             键盘：A–F 选项，Enter 确认/下一题，← → 翻页。
