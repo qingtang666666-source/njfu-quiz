@@ -1,0 +1,96 @@
+{
+  "schema": "njfu-quiz/v1",
+  "subjects": [
+    {
+      "id": "jindaishi",
+      "name": "中国近代史纲要",
+      "term": "2026",
+      "version": "20260701",
+      "count": 977,
+      "byType": {
+        "single": 485,
+        "multiple": 217,
+        "judge": 275
+      },
+      "variants": 1
+    },
+    {
+      "id": "xigai",
+      "name": "习近平新时代中国特色社会主义思想",
+      "term": "2026",
+      "version": "20260701",
+      "count": 686,
+      "byType": {
+        "single": 365,
+        "multiple": 135,
+        "judge": 186
+      },
+      "variants": 2
+    },
+    {
+      "id": "mayuan",
+      "name": "马克思主义基本原理",
+      "term": "2026",
+      "version": "20260701",
+      "count": 1720,
+      "byType": {
+        "single": 812,
+        "multiple": 470,
+        "judge": 438
+      },
+      "variants": 5
+    },
+    {
+      "id": "sifa",
+      "name": "思想道德与法治",
+      "term": "2026",
+      "version": "20260701",
+      "count": 1612,
+      "byType": {
+        "single": 705,
+        "multiple": 375,
+        "judge": 532
+      },
+      "variants": 1
+    },
+    {
+      "id": "maogai",
+      "name": "毛泽东思想和中国特色社会主义理论体系概论",
+      "term": "2026",
+      "version": "20260701",
+      "count": 1213,
+      "byType": {
+        "single": 680,
+        "multiple": 199,
+        "judge": 334
+      },
+      "variants": 3
+    },
+    {
+      "id": "xinli",
+      "name": "大学生心理健康教育",
+      "term": "2026",
+      "version": "20260701",
+      "count": 1769,
+      "byType": {
+        "single": 1068,
+        "multiple": 264,
+        "judge": 437
+      },
+      "variants": 6
+    },
+    {
+      "id": "rgzn",
+      "name": "人工智能",
+      "term": "2026",
+      "version": "20260107",
+      "count": 1036,
+      "byType": {
+        "judge": 384,
+        "single": 652
+      },
+      "variants": 3
+    }
+  ],
+  "total": 9013
+}
