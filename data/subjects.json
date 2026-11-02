@@ -90,7 +90,22 @@
         "single": 652
       },
       "variants": 3
+    },
+    {
+      "id": "junli",
+      "name": "军事理论",
+      "term": "2022",
+      "version": "2022",
+      "count": 310,
+      "byType": {
+        "fill": 135,
+        "single": 59,
+        "multiple": 29,
+        "judge": 57,
+        "essay": 30
+      },
+      "variants": 0
     }
   ],
-  "total": 9013
+  "total": 9323
 }
