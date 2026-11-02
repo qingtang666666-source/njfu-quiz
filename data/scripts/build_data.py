@@ -194,12 +194,16 @@ def build_parsed(sid, name, path):
     for q in questions:
         by_type[q["type"]] = by_type.get(q["type"], 0) + 1
 
+    # 版本号跟随数据源声明的年份（source 里第一个四位数字），不再硬编码 2022
+    ver = (re.search(r"(\d{4})", src.get("source", "")) or ["2022"])[0]
     payload = {
         "schema": "njfu-quiz/v1",
         "subject": {
-            "id": sid, "name": name, "term": "2022", "version": "2022",
+            "id": sid, "name": name, "term": ver, "version": ver,
             "count": len(questions), "byType": by_type,
             "variants": sum(1 for q in questions if q["variantOf"]),
+            "officialMerged": src.get("merged_official", 0),
+            "officialAdded": src.get("added_official", 0),
         },
         "questions": questions,
     }

@@ -94,18 +94,20 @@
     {
       "id": "junli",
       "name": "军事理论",
-      "term": "2022",
-      "version": "2022",
-      "count": 310,
+      "term": "2026",
+      "version": "2026",
+      "count": 394,
       "byType": {
-        "fill": 135,
-        "single": 59,
-        "multiple": 29,
-        "judge": 57,
+        "fill": 166,
+        "single": 79,
+        "multiple": 48,
+        "judge": 71,
         "essay": 30
       },
-      "variants": 0
+      "variants": 0,
+      "officialMerged": 41,
+      "officialAdded": 84
     }
   ],
-  "total": 9323
+  "total": 9407
 }

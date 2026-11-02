@@ -2,7 +2,7 @@
 
 作者：青棠
 
-南林马院 2026 题库 + 军事理论题库的刷题应用。8 门科目、9323 道题，网页与安卓双端，纯本地运行，不上传任何数据。
+南林马院 2026 题库 + 军事理论题库的刷题应用。8 门科目、9407 道题，网页与安卓双端，纯本地运行，不上传任何数据。
 
 在线体验：https://qingtang666666-source.github.io/njfu-quiz/
 
@@ -31,7 +31,7 @@
 ```
 njfu-quiz/
 ├── web/                    前端（Vite + React + TypeScript + Dexie）
-│   ├── public/data/        题库（subjects.json + 每科目一个 json，共 3.9 MB）
+│   ├── public/data/        题库（subjects.json + 每科目一个 json，共 3.8 MB）
 │   ├── src/
 │   │   ├── domain/         纯逻辑：类型、判分、组卷
 │   │   ├── db/             Dexie 表结构与全部读写
