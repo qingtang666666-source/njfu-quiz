@@ -1,4 +1,4 @@
-export type QType = 'single' | 'multiple' | 'judge'
+export type QType = 'single' | 'multiple' | 'judge' | 'fill' | 'essay'
 
 export interface Option {
   key: string
@@ -16,6 +16,12 @@ export interface Question {
   hash: string
   variantOf: string | null
   subjectId: string
+  /** 填空题的空数 */
+  blanks?: number
+  /** 简答/论述题的答案要点 */
+  explanation?: string
+  /** 章节（军理题库按章分） */
+  chapter?: string
 }
 
 export interface SubjectMeta {
@@ -28,7 +34,7 @@ export interface SubjectMeta {
   variants: number
 }
 
-export type AnswerState = 'unanswered' | 'correct' | 'wrong'
+export type AnswerState = 'unanswered' | 'correct' | 'wrong' | 'viewed'
 
 export interface ProgressRow {
   key: string // `${subjectId}|${qid}`
@@ -85,12 +91,16 @@ export const TYPE_LABEL: Record<QType, string> = {
   single: '单选',
   multiple: '多选',
   judge: '判断',
+  fill: '填空',
+  essay: '简答',
 }
 
 export const SCORE: Record<QType, number> = {
   single: 1,
   multiple: 2,
   judge: 1,
+  fill: 1,
+  essay: 0,
 }
 
 export function keyOf(subjectId: string, qid: string) {

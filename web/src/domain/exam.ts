@@ -54,7 +54,10 @@ export function buildExam(
     ['multiple', []],
     ['judge', []],
   ])
-  for (const q of pool) byType.get(q.type)!.push(q)
+  for (const q of pool) {
+    const bucket = byType.get(q.type)
+    if (bucket) bucket.push(q)   // 填空/简答不进模拟考试
+  }
 
   const pick = (t: QType, n: number) => shuffle(byType.get(t)!, rand).slice(0, Math.max(0, n))
   const chosen = [...pick('single', spec.single), ...pick('multiple', spec.multiple), ...pick('judge', spec.judge)]
@@ -66,7 +69,9 @@ export function buildExam(
 /** 按题型给出实际可用数量，用于前端展示"本题库只有 652 道单选" */
 export function availableCounts(questions: readonly Question[]) {
   const pool = uniqueByStem(questions)
-  const counts: Record<QType, number> = { single: 0, multiple: 0, judge: 0 }
-  for (const q of pool) counts[q.type] += 1
+  const counts: Record<'single' | 'multiple' | 'judge', number> = { single: 0, multiple: 0, judge: 0 }
+  for (const q of pool) {
+    if (q.type === 'single' || q.type === 'multiple' || q.type === 'judge') counts[q.type] += 1
+  }
   return counts
 }

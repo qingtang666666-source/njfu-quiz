@@ -59,9 +59,12 @@ export default function Stats() {
                 </div>
                 <div className="bar" style={{ marginTop: 5 }}><i style={{ width: `${done}%` }} /></div>
                 <div className="tiny muted" style={{ marginTop: 3 }}>
-                  单选 {st.byType.single.correct}/{st.byType.single.total}
-                  {' · '}多选 {st.byType.multiple.correct}/{st.byType.multiple.total}
-                  {' · '}判断 {st.byType.judge.correct}/{st.byType.judge.total}
+                  {([
+                    ['single', '单选'], ['multiple', '多选'], ['judge', '判断'], ['fill', '填空'], ['essay', '简答'],
+                  ] as const).map(([k, label]) => {
+                    const t = st.byType[k]
+                    return t.total ? <span key={k}>{label} {t.correct}/{t.total}{' '}</span> : null
+                  })}
                 </div>
               </div>
             )

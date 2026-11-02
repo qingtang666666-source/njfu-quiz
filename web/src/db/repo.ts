@@ -115,6 +115,19 @@ export async function recordAnswer(args: RecordArgs & { mastery?: number }): Pro
   return { correct, streak, mastered }
 }
 
+/** 简答/论述：只记录"看过"，不判分、不进错题本 */
+export async function markViewed(args: { subjectId: string; qid: string; at?: number }) {
+  const { subjectId, qid, at = Date.now() } = args
+  const key = keyOf(subjectId, qid)
+  await db.transaction('rw', db.progress, async () => {
+    const prev = await db.progress.get(key)
+    await db.progress.put({
+      key, subjectId, qid, state: 'viewed', userAnswer: [],
+      times: (prev?.times ?? 0) + 1, lastAt: at,
+    })
+  })
+}
+
 export async function startSession(subjectId: string, mode: Mode, total: number): Promise<number> {
   return db.sessions.add({
     subjectId, mode, startedAt: Date.now(), endedAt: null,
@@ -145,6 +158,8 @@ export async function subjectStats(subjectId: string): Promise<SubjectStats> {
     single: { total: 0, answered: 0, correct: 0 },
     multiple: { total: 0, answered: 0, correct: 0 },
     judge: { total: 0, answered: 0, correct: 0 },
+    fill: { total: 0, answered: 0, correct: 0 },
+    essay: { total: 0, answered: 0, correct: 0 },
   }
   let answered = 0
   let correct = 0
@@ -152,7 +167,7 @@ export async function subjectStats(subjectId: string): Promise<SubjectStats> {
     const t = byType[q.type]
     t.total += 1
     const p = pm.get(q.qid)
-    if (p && p.state !== 'unanswered') {
+    if (p && (p.state === 'correct' || p.state === 'wrong')) {
       answered += 1
       t.answered += 1
       if (p.state === 'correct') {

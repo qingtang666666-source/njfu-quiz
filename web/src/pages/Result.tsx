@@ -25,6 +25,8 @@ export default function Result({ sid, result }: { sid: string; result: ExamResul
     single: { total: 0, correct: 0, score: 0, full: 0 },
     multiple: { total: 0, correct: 0, score: 0, full: 0 },
     judge: { total: 0, correct: 0, score: 0, full: 0 },
+    fill: { total: 0, correct: 0, score: 0, full: 0 },
+    essay: { total: 0, correct: 0, score: 0, full: 0 },
   }
   const wrongList: { qid: string; stem: string; mine: string[]; right: string[] }[] = []
   for (const q of paper.questions) {

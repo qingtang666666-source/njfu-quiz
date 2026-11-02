@@ -49,9 +49,13 @@ export default function Subject({ sid }: { sid: string }) {
           </div>
           <div className="bar ok" style={{ marginTop: 12 }}><i style={{ width: `${pct}%` }} /></div>
           <div className="tiny muted" style={{ marginTop: 8 }}>
-            单选 {stats?.byType.single.total ?? meta.byType.single ?? 0}
-            {' · '}多选 {stats?.byType.multiple.total ?? meta.byType.multiple ?? 0}
-            {' · '}判断 {stats?.byType.judge.total ?? meta.byType.judge ?? 0}
+            {[
+              ['single', '单选'], ['multiple', '多选'], ['judge', '判断'], ['fill', '填空'], ['essay', '简答'],
+            ].map(([k, label], i) => {
+              const n = (stats?.byType as any)?.[k]?.total ?? (meta.byType as any)?.[k] ?? 0
+              if (!n) return null
+              return <span key={k}>{i > 0 && ' · '}{label} {n}</span>
+            })}
           </div>
         </div>
 

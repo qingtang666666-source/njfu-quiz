@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TopBar, subjectById, useApp } from '../App'
 import { useSubject } from '../components/useSubject'
 import {
-  finishSession, getMastery, getMeta, listWrong, recordAnswer, setMeta, startSession, starSet, toggleStar,
+  finishSession, getMastery, getMeta, listWrong, markViewed, recordAnswer, setMeta, startSession, starSet, toggleStar,
 } from '../db/repo'
 import { answerText, isCorrect, normalizeAnswer } from '../domain/grade'
 import { TYPE_LABEL, type Question } from '../domain/types'
@@ -41,6 +41,8 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
   const [mastery, setMasteryState] = useState(2)
   const [streaks, setStreaks] = useState<Record<string, number>>({})
   const [lastResult, setLastResult] = useState<{ streak: number; mastered: boolean; correct: boolean } | null>(null)
+  const [fillInputs, setFillInputs] = useState<string[]>([])
+  const [revealed, setRevealed] = useState(false)
   const [round, setRound] = useState(0)
   const [roundDone, setRoundDone] = useState(false)
 
@@ -110,6 +112,8 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
     setGraded(false)
     setCorrect(false)
     setLastResult(null)
+    setFillInputs([])
+    setRevealed(false)
   }, [])
 
   const goTo = useCallback((n: number) => {
@@ -145,6 +149,12 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
       void submit([key])
     }
   }, [q, graded, submit])
+
+  const revealEssay = useCallback(async () => {
+    if (!q) return
+    setRevealed(true)
+    await markViewed({ subjectId: sid, qid: q.qid })
+  }, [q, sid])
 
   const next = useCallback(() => {
     if (idx + 1 < queue.length) {
@@ -260,20 +270,51 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
 
         <div className="stem">{q.stem}</div>
 
-        {q.options.map((o) => {
-          const isSel = selected.includes(o.key)
-          let cls = 'opt'
-          if (graded) {
-            if (q.answer.includes(o.key)) cls += ' ok'
-            else if (isSel) cls += ' bad'
-          } else if (isSel) cls += ' sel'
-          return (
-            <button key={o.key} className={cls} disabled={graded} onClick={() => choose(o.key)}>
-              <span className="k">{o.key}</span>
-              <span className="t">{o.text}</span>
-            </button>
-          )
-        })}
+        {q.type === 'fill' ? (
+          <div>
+            {Array.from({ length: q.blanks ?? q.answer.length }).map((_, i) => (
+              <input
+                key={i}
+                className="search"
+                style={{ marginBottom: 8 }}
+                placeholder={`第 ${i + 1} 空`}
+                value={fillInputs[i] ?? ''}
+                disabled={graded}
+                onChange={(e) => setFillInputs((prev) => {
+                  const next = [...prev]
+                  next[i] = e.target.value
+                  return next
+                })}
+              />
+            ))}
+          </div>
+        ) : q.type === 'essay' ? (
+          <div>
+            {!revealed ? (
+              <button className="btn block" onClick={() => void revealEssay()}>显示答案要点</button>
+            ) : (
+              <div className="answerbox">
+                <div className="label">答案要点</div>
+                <div className="val" style={{ whiteSpace: 'pre-wrap' }}>{q.explanation}</div>
+              </div>
+            )}
+          </div>
+        ) : (
+          q.options.map((o) => {
+            const isSel = selected.includes(o.key)
+            let cls = 'opt'
+            if (graded) {
+              if (q.answer.includes(o.key)) cls += ' ok'
+              else if (isSel) cls += ' bad'
+            } else if (isSel) cls += ' sel'
+            return (
+              <button key={o.key} className={cls} disabled={graded} onClick={() => choose(o.key)}>
+                <span className="k">{o.key}</span>
+                <span className="t">{o.text}</span>
+              </button>
+            )
+          })
+        )}
 
         {!graded && q.type === 'multiple' && (
           <button
@@ -286,13 +327,18 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
           </button>
         )}
 
-        {graded && (
+        {graded && q.type !== 'essay' && (
           <>
             <div className={`answerbox ${correct ? 'ok' : 'bad'}`}>
               <div className="label">{correct ? '回答正确' : '回答错误'}</div>
               <div className="val">
                 正确答案：{answerText(q)}
-                {!correct && selected.length > 0 && (
+                {!correct && q.type === 'fill' && (
+                  <div className="small" style={{ marginTop: 4 }}>
+                    你的答案：{fillInputs.map((v) => v || '（空）').join(' / ')}
+                  </div>
+                )}
+                {!correct && q.type !== 'fill' && selected.length > 0 && (
                   <div className="small" style={{ marginTop: 4 }}>
                     你的答案：{normalizeAnswer(selected).join(' ')}
                   </div>
@@ -327,12 +373,21 @@ export default function Practice({ sid, mode, startQid }: { sid: string; mode: P
             <button
               className="btn primary"
               onClick={() => {
-                if (q.type === 'multiple') { if (selected.length) void submit(selected) }
-                else if (selected.length) void submit(selected)
-                else toast('先选一个答案')
+                if (q.type === 'fill') {
+                  const filled = Array.from({ length: q.blanks ?? q.answer.length }, (_, i) => fillInputs[i] ?? '')
+                  if (filled.every((v) => v.trim())) void submit(filled)
+                  else toast('把每个空都填上')
+                } else if (q.type === 'essay') {
+                  if (!revealed) void revealEssay()
+                  else next()
+                } else if (selected.length) {
+                  void submit(selected)
+                } else {
+                  toast('先选一个答案')
+                }
               }}
             >
-              确认答案
+              {q.type === 'essay' ? (revealed ? '下一题' : '显示答案') : '确认答案'}
             </button>
           )}
         </div>

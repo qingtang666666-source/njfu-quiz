@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { answerText, isCorrect, normalizeAnswer, stemKey } from '../src/domain/grade'
+import { answerText, isCorrect, matchBlank, normalizeAnswer, normalizeText, stemKey } from '../src/domain/grade'
 import type { Question } from '../src/domain/types'
 
 const q = (type: Question['type'], answer: string[], options: string[] = ['A', 'B', 'C', 'D']): Question => ({
@@ -53,6 +53,59 @@ describe('answerText', () => {
   it('判断题输出正确/错误', () => {
     expect(answerText(q('judge', ['A'], ['A', 'B']))).toBe('正确')
     expect(answerText(q('judge', ['B'], ['A', 'B']))).toBe('错误')
+  })
+})
+
+describe('填空题判分', () => {
+  const fill = (answers: string[]): Question => ({
+    qid: 'j:1', serverId: 1, type: 'fill', stem: '____是____', answer: answers,
+    options: [], version: '2022', hash: 'h', variantOf: null, subjectId: 'junli', blanks: answers.length,
+  })
+
+  it('逐空完全一致', () => {
+    const q = fill(['侵略', '武装颠覆和分裂'])
+    expect(isCorrect(q, ['侵略', '武装颠覆和分裂'])).toBe(true)
+  })
+  it('忽略空格与标点', () => {
+    const q = fill(['侵略'])
+    expect(isCorrect(q, ['  侵略。'])).toBe(true)
+  })
+  it('括号别名可接受', () => {
+    const q = fill(['七七事变（又称卢沟桥事变）'])
+    expect(isCorrect(q, ['卢沟桥事变'])).toBe(true)
+  })
+  it('有一空错就整题错', () => {
+    const q = fill(['侵略', '武装颠覆和分裂'])
+    expect(isCorrect(q, ['侵略', '分裂'])).toBe(false)
+  })
+  it('空数不一致判错', () => {
+    const q = fill(['侵略', '武装颠覆和分裂'])
+    expect(isCorrect(q, ['侵略'])).toBe(false)
+  })
+  it('空字符串判错', () => {
+    expect(isCorrect(fill(['侵略']), ['   '])).toBe(false)
+  })
+})
+
+describe('简答题', () => {
+  it('不判分，始终 false', () => {
+    const q: Question = {
+      qid: 'j:2', serverId: 2, type: 'essay', stem: '论述', answer: [],
+      options: [], version: '2022', hash: 'h', variantOf: null, subjectId: 'junli',
+      explanation: '要点一\n要点二',
+    }
+    expect(isCorrect(q, ['随便写'])).toBe(false)
+    expect(answerText(q)).toContain('要点一')
+  })
+})
+
+describe('normalizeText', () => {
+  it('去空白和标点', () => {
+    expect(normalizeText(' 国防 的主体，是。 ')).toBe('国防的主体是')
+    expect(normalizeText('A、B')).toBe('ab')
+  })
+  it('matchBlank 拒绝过短片段', () => {
+    expect(matchBlank('武装颠覆和分裂', '分裂')).toBe(false)
   })
 })
 

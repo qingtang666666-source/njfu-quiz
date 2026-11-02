@@ -30,6 +30,12 @@ SUBJECTS = [
     ("rgzn", "人工智能", "人工智能"),
 ]
 
+# 预解析格式的题库（不是服务端 RECORDS）：sid -> (名称, 文件路径)
+PARSED = {
+    "junli": ("军事理论", os.environ.get("NJFU_JUNLI") or os.path.join(
+        os.path.dirname(ROOT), "junli", "out", "junli-questions.json")),
+}
+
 TYPE_MAP = {"单选": "single", "多选": "multiple", "判断": "judge"}
 
 
@@ -119,6 +125,90 @@ def build_one(sid, name, category):
     return payload["subject"]
 
 
+def build_parsed(sid, name, path):
+    """解析好的题库（junli-questions.json）→ schema v1。"""
+    src = json.load(open(path, encoding="utf-8"))
+    items = src["items"]
+    questions, stem_first = [], {}
+    TYPE = {"fill": "fill", "single": "single", "multiple": "multiple", "judge": "judge", "essay": "essay"}
+    for i, it in enumerate(items, 1):
+        qtype = TYPE[it["type"]]
+        stem = norm_space(it["stem_clean"])
+        chapter = norm_space(it["chapter"])
+        if qtype == "fill":
+            options = []
+            answer = [norm_space(x) for x in it["answer_text"].split(" / ") if x.strip()]
+            blanks = len(answer)
+        elif qtype == "essay":
+            options, answer, blanks = [], [], 0
+        elif qtype == "judge":
+            options = [{"key": "A", "text": "正确"}, {"key": "B", "text": "错误"}]
+            answer = ["A" if it["answer_text"] == "对" else "B"]
+            blanks = 0
+        else:
+            opts = it["options"]
+            options = [{"key": k, "text": norm_space(v)} for k, v in sorted(opts.items())]
+            answer = [c for c in it["answer_text"] if c.isalpha()]
+            blanks = 0
+
+        h = hashlib.sha256(
+            (stem + "|" + json.dumps(options, ensure_ascii=False, sort_keys=True) + "|"
+             + "|".join(answer) + "|" + str(blanks)).encode("utf-8")
+        ).hexdigest()[:16]
+        qid = "%s:%d" % (sid, i)
+        key = (qtype, stem)
+        variant_of = stem_first.get(key)
+        stem_first.setdefault(key, qid)
+
+        q = {
+            "qid": qid, "serverId": i, "type": qtype, "stem": stem,
+            "options": options, "answer": answer,
+            "version": (re.search(r"(\d{4})", src.get("source", "")) or ["2022"])[0],
+            "hash": h, "variantOf": variant_of, "chapter": chapter,
+        }
+        if qtype == "fill":
+            q["blanks"] = blanks
+        if qtype == "essay":
+            q["explanation"] = norm_space(it["answer_text"])
+        questions.append(q)
+
+    # 断言
+    assert len(questions) == len(items), "题数不一致"
+    assert len({q["qid"] for q in questions}) == len(questions), "qid 重复"
+    for q in questions:
+        assert q["stem"], "空题干: %s" % q["qid"]
+        if q["type"] in ("single", "multiple"):
+            keys = {o["key"] for o in q["options"]}
+            assert set(q["answer"]) <= keys, "答案不在选项内: %s" % q["qid"]
+            assert len(q["answer"]) == (1 if q["type"] == "single" else len(q["answer"])), "答案长度异常"
+            if q["type"] == "multiple":
+                assert len(q["answer"]) >= 2, "多选答案过少: %s" % q["qid"]
+        if q["type"] == "judge":
+            assert q["answer"][0] in ("A", "B"), "判断答案异常: %s" % q["qid"]
+        if q["type"] == "fill":
+            assert len(q["answer"]) == q["blanks"] and q["blanks"] > 0, "填空答案数异常: %s" % q["qid"]
+        if q["type"] == "essay":
+            assert q.get("explanation"), "简答缺答案: %s" % q["qid"]
+
+    by_type = {}
+    for q in questions:
+        by_type[q["type"]] = by_type.get(q["type"], 0) + 1
+
+    payload = {
+        "schema": "njfu-quiz/v1",
+        "subject": {
+            "id": sid, "name": name, "term": "2022", "version": "2022",
+            "count": len(questions), "byType": by_type,
+            "variants": sum(1 for q in questions if q["variantOf"]),
+        },
+        "questions": questions,
+    }
+    os.makedirs(OUT, exist_ok=True)
+    with open(os.path.join(OUT, sid + ".json"), "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
+    return payload["subject"]
+
+
 if __name__ == "__main__":
     index = []
     total = 0
@@ -128,6 +218,15 @@ if __name__ == "__main__":
         total += s["count"]
         print("  %-10s %-30s %5d 条  version=%s  题型=%s  变体=%d" % (
             sid, name, s["count"], s["version"], s["byType"], s["variants"]))
+    for sid, (name, path) in PARSED.items():
+        if not os.path.exists(path):
+            print("  %-10s 跳过：找不到 %s" % (sid, path))
+            continue
+        sub = build_parsed(sid, name, path)
+        index.append(sub)
+        total += sub["count"]
+        print("  %-10s %-30s %5d 条  题型=%s" % (sid, name, sub["count"], sub["byType"]))
+
     with open(os.path.join(OUT, "subjects.json"), "w", encoding="utf-8") as f:
         json.dump({"schema": "njfu-quiz/v1", "subjects": index, "total": total}, f,
                   ensure_ascii=False, indent=2)
